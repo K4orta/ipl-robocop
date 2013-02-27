@@ -20,7 +20,7 @@ module.exports = class BracketEditorView extends BracketView
 
 	render: ->
 		super
-		hotZone = $('<div class="hotzone">').prependTo(@$el).width(@$el.width()).height(@$el.height())
+		hotZone = $('<div class="hotzone">').insertBefore(@$el.find('.match-layer')).width(@$el.width()).height(@$el.height())
 		hotZone.css
 			'position': 'absolute'
 		hotZone.draggable
@@ -106,11 +106,11 @@ module.exports = class BracketEditorView extends BracketView
 				bottom: mPos.top + match.$el.height()
 				right: mPos.left + match.$el.width()
 				left: mPos.left
-			if (mDim.right > selection.left and mDim.left < selection.right) and (mDim.bottom > selection.top and mDim.top < selection.bottom )
-				unless match.$el.hasClass('activeSelect')
-					@selected.push match.model
-					match.$el.addClass 'activeSelect'
-					# console.log match.$el.hasClass('activeSelect')
-					mediator.publish 'change:selected', @selected
-
+			unless match.$el.hasClass('activeSelect')
+				if (mDim.right > selection.left and mDim.left < selection.right)
+					if (mDim.bottom > selection.top and mDim.top < selection.bottom)
+						@selected.push match.model
+						match.$el.addClass 'activeSelect'
+		if @selected > 0
+			mediator.publish 'change:selected', @selected
 

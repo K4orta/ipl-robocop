@@ -1,4 +1,5 @@
 module.exports = class Viper
+	@enabled = true
 	@defSync: (callback) ->
 		if callback?
 			success:(data)=>
