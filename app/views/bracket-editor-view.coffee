@@ -9,16 +9,26 @@ module.exports = class BracketEditorView extends BracketView
 	initialize:(options)->
 		super(options)
 		@model.url = ()-> BracketUrls.apiBase+"/brackets/v6/api/"
-
-		@delegate 'click', '.match', (ev)->@clickMatch(ev)
-		@delegate 'click', '.hotzone', ()-> @deselect()
+		@dragging = false
+		@delegate 'click', '.match', (ev)-> @clickMatch(ev)
+		@delegate 'click', '.hotzone', ()->
+			unless @dragging
+				@deselect()
 		@delegate 'click', '.bracket-title', (ev)->@editTitle(ev)
 		@delegate 'blur', '.bracket-title-input', (ev)->@saveTitle(ev)
 		@selected = []
 
 	render: ->
 		super
-		$('<div class="hotzone">').appendTo(@$el).width(@$el.width()).height(@$el.height())
+		hotZone = $('<div class="hotzone">').prependTo(@$el).width(@$el.width()).height(@$el.height())
+		hotZone.css
+			'position': 'absolute'
+		hotZone.draggable
+			start: (e)=>
+				@startSelect(e)
+				false
+
+		@.$('.match-layer').css 'z-index', 10
 		$('<input type="text" class="bracket-title-input">').appendTo(@.$('.label-layer span.bracket-title'))
 		@
 
@@ -50,3 +60,57 @@ module.exports = class BracketEditorView extends BracketView
 		@model.set 'slug', newTitle.toLowerCase().replace(/\ /g, '-').replace(/[^\w|-]/g, '')
 		@.$('.bracket-title h1').text @model.get 'title'
 		Mcclane.save()
+
+	startSelect: (e)=>
+		@dragOrigin =
+			x: e.pageX
+			y: e.pageY
+		@dragBox = $('<div class="drag-selection-box">').appendTo(@$el).css
+			position: 'absolute'
+			'background-color': 'rgba(255,255,255,.8)'
+			border: '1px solid white'
+			top: @dragOrigin.y
+			left: @dragOrigin.x
+		@dragging = true
+		$(window).mousemove @runDrag
+		$(window).mouseup @endSelect
+
+	runDrag: (e)=>
+		@dragBox.css
+			width: Math.abs(e.pageX - @dragOrigin.x)
+			height: Math.abs(e.pageY - @dragOrigin.y)
+		@dragBox.css 'left', if e.pageX > @dragOrigin.x then @dragOrigin.x else @dragOrigin.x - @dragBox.width()
+		@dragBox.css 'top', if e.pageY > @dragOrigin.y then @dragOrigin.y else @dragOrigin.y - @dragBox.height()
+
+	endSelect: (e)=>
+		sPos = @dragBox.position()
+		@selectMatchesIn
+			top: sPos.top
+			right: sPos.left + @dragBox.width()
+			bottom: sPos.top + @dragBox.height()
+			left: sPos.left
+		$(window).off 'mousemove', @runDrag
+		$(window).off 'mouseup', @endSelect
+
+		@dragBox.fadeOut('fast', ()=>
+			@dragBox.remove()
+			@dragging = false
+		)
+
+	selectMatchesIn: (selection)=>
+		@deselect()
+		for match in @matchViews
+			mPos = match.$el.position()
+			mDim =
+				top: mPos.top
+				bottom: mPos.top + match.$el.height()
+				right: mPos.left + match.$el.width()
+				left: mPos.left
+			if (mDim.right > selection.left and mDim.left < selection.right) and (mDim.bottom > selection.top and mDim.top < selection.bottom )
+				unless match.$el.hasClass('activeSelect')
+					@selected.push match.model
+					match.$el.addClass 'activeSelect'
+					# console.log match.$el.hasClass('activeSelect')
+					mediator.publish 'change:selected', @selected
+
+

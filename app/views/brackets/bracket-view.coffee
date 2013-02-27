@@ -31,7 +31,7 @@ module.exports = class BracketView extends View
 		groups = @model.get 'groups'
 		seed = RootFinder.find(matches.models)
 
-		matchViews = []
+		@matchViews = []
 		unless seed?
 			return @
 		if @renderCount < 1
@@ -42,7 +42,7 @@ module.exports = class BracketView extends View
 			mv = new MatchView({model:match})
 			mv.$el.data 'match', mv.model
 			mv.$el.appendTo @$el.find('.match-layer')
-			matchViews.push mv
+			@matchViews.push mv
 		for group in groups.models
 			gv = new GroupView(model:group)
 			gv.$el.data 'group', gv.model
@@ -57,6 +57,6 @@ module.exports = class BracketView extends View
 		#connect everything
 		for match in matches.models
 			if match.get('children').length > 0
-				Connector.connect(match, matchViews).appendTo @$el.find('.line-layer')
+				Connector.connect(match, @matchViews).appendTo @$el.find('.line-layer')
 		++@renderCount
 	@
